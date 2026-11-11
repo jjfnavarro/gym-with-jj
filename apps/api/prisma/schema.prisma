@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  singleton Int @unique @default(1)
+  email String @unique
+  name String
+  passwordHash String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  settings UserSettings?
+  authSessions AuthSession[]
+  splits WorkoutSplit[]
+  exercises Exercise[]
+  workouts WorkoutSession[]
+}
+model UserSettings {
+  userId String @id @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  preferences Json
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+model AuthSession {
+  tokenHash String @id
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  csrfToken String
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([userId])
+  @@index([expiresAt])
+}
+model WorkoutSplit {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  name String
+  archived Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  days SplitDay[]
+  @@index([userId,archived])
+}
+model SplitDay {
+  id String @id @default(uuid()) @db.Uuid
+  splitId String @db.Uuid
+  split WorkoutSplit @relation(fields:[splitId],references:[id],onDelete:Cascade)
+  name String
+  position Int
+  isRest Boolean @default(false)
+  cardioMinutes Int @default(0)
+  exercises SplitDayExercise[]
+  @@index([splitId,position])
+}
+model Exercise {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  name String
+  primaryMuscle String
+  secondaryMuscles String[]
+  equipment String
+  loadMode String
+  notes String @default("")
+  archived Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  prescriptions SplitDayExercise[]
+  @@index([userId,name])
+}
+model SplitDayExercise {
+  id String @id @default(uuid()) @db.Uuid
+  dayId String @db.Uuid
+  day SplitDay @relation(fields:[dayId],references:[id],onDelete:Cascade)
+  exerciseId String @db.Uuid
+  exercise Exercise @relation(fields:[exerciseId],references:[id],onDelete:Restrict)
+  position Int
+  sets Int
+  repMin Int
+  repMax Int
+  restSeconds Int
+  warmupSets Int @default(0)
+  notes String @default("")
+  alternative String @default("")
+  alternativeReps String @default("")
+  @@index([dayId,position])
+  @@index([exerciseId])
+}
+model WorkoutSession {
+  id String @id @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  // Template IDs are provenance only: snapshots survive template deletion.
+  splitId String? @db.Uuid
+  dayId String? @db.Uuid
+  splitName String
+  dayName String
+  unit String
+  status String
+  startedAt DateTime @db.Timestamptz(3)
+  finishedAt DateTime? @db.Timestamptz(3)
+  pausedAt DateTime? @db.Timestamptz(3)
+  pausedMs Int @default(0)
+  notes String @default("")
+  version Int @default(1)
+  lastMutationId String @db.Uuid
+  deletedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  exercises WorkoutSessionExercise[]
+  cardio CardioEntry[]
+  @@index([userId,status,startedAt])
+}
+model WorkoutSessionExercise {
+  id String @id @db.Uuid
+  sessionId String @db.Uuid
+  session WorkoutSession @relation(fields:[sessionId],references:[id],onDelete:Cascade)
+  exerciseId String @db.Uuid
+  position Int
+  name String
+  primaryMuscle String
+  equipment String
+  loadMode String
+  repMin Int
+  repMax Int
+  restSeconds Int
+  exerciseRestSeconds Int @default(180)
+  notes String
+  alternative String
+  skipped Boolean
+  sets WorkoutSet[]
+  @@index([sessionId,position])
+  @@index([exerciseId])
+}
+model WorkoutSet {
+  id String @id @db.Uuid
+  sessionExerciseId String @db.Uuid
+  exercise WorkoutSessionExercise @relation(fields:[sessionExerciseId],references:[id],onDelete:Cascade)
+  position Int
+  weightKg Decimal @db.Decimal(9,3)
+  reps Int
+  completed Boolean
+  warmup Boolean
+  @@index([sessionExerciseId,position])
+}
+model CardioEntry {
+  id String @id @db.Uuid
+  sessionId String @db.Uuid
+  session WorkoutSession @relation(fields:[sessionId],references:[id],onDelete:Cascade)
+  durationMinutes Decimal @db.Decimal(7,2)
+  speedKph Decimal @db.Decimal(5,2)
+  incline Decimal @db.Decimal(5,2)
+  completed Boolean
+  @@index([sessionId])
+}

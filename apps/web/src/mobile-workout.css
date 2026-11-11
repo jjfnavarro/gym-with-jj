@@ -1,0 +1,564 @@
+/* Workout controls shared by desktop and the phone-first session layout. */
+.live-progress-info {
+  flex: 1;
+  max-width: 310px;
+  min-width: 0;
+}
+.live-progress-info > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.live-progress-track {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--line);
+  margin-top: 9px;
+  overflow: hidden;
+}
+.live-progress-track > span {
+  display: block;
+  height: 100%;
+  background: var(--coral);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.live-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.live-toolbar .live-finish-button {
+  min-height: 42px;
+}
+.manage-sets-button {
+  display: none;
+}
+.inline-rest-label {
+  font-size: 11px;
+}
+
+/* One compact countdown, with secondary controls available on demand. */
+.rest-timer {
+  display: block;
+  padding: 12px 14px;
+}
+.timer-compact-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 44px 44px;
+  align-items: center;
+  gap: 10px;
+}
+.rest-done .timer-compact-row {
+  grid-template-columns: 56px minmax(0, 1fr) 44px;
+}
+.rest-timer .progress-ring {
+  width: 56px !important;
+  height: 56px !important;
+}
+.rest-timer .timer-time {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.rest-timer .timer-title {
+  max-width: none;
+  gap: 4px;
+}
+.rest-timer .timer-title strong {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.rest-timer .timer-title span {
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.timer-compact-row > .icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #ffffff20;
+  background: #ffffff0b;
+}
+.timer-expand-button svg {
+  transition: transform 0.2s ease;
+}
+.timer-expanded .timer-expand-button svg {
+  transform: rotate(180deg);
+}
+.timer-expanded-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #ffffff25;
+}
+.rest-timer .timer-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.35fr;
+  gap: 8px;
+  margin: 0;
+  width: 100%;
+}
+.rest-timer .timer-controls .icon-button {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  min-height: 46px;
+  border: 1px solid #ffffff25;
+  background: #ffffff0a;
+}
+.timer-duration-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  color: #e1ced9;
+  font-size: 12px;
+  font-weight: 500;
+}
+.timer-duration-field select {
+  width: 142px;
+  min-height: 44px;
+  margin: 0;
+  padding: 9px 10px;
+  font-size: 14px;
+  border-color: #ffffff30;
+  background: #fff7ee;
+  color: #440031;
+}
+
+@media (max-width: 700px) {
+  html:has(.live-exercises) {
+    scroll-padding-top: 90px;
+    scroll-padding-bottom: calc(var(--rest-timer-height, 0px) + 100px);
+  }
+  /* Readable labels and deliberate targets for one-handed set logging. */
+  .page-content:has(.live-exercises) {
+    padding: 20px 16px calc(112px + env(safe-area-inset-bottom));
+  }
+  body:has(.rest-timer) .page-content {
+    padding-bottom: calc(var(--rest-timer-height, 80px) + 110px + env(safe-area-inset-bottom));
+  }
+  .page-content:has(.live-exercises) .back-link {
+    font-size: 12px;
+    min-height: 44px;
+    margin: -8px 0 13px;
+  }
+  .page-content:has(.live-exercises) .page-footer {
+    display: none;
+  }
+  .workout-header {
+    gap: 12px;
+    padding-bottom: 20px;
+  }
+  .workout-header > div:first-child {
+    min-width: 0;
+  }
+  .workout-header .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    margin-bottom: 8px;
+  }
+  .workout-header h1 {
+    font-size: 29px;
+    line-height: 1.16;
+  }
+  .workout-header > div > p {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .workout-header .progress-ring {
+    width: 84px !important;
+    height: 84px !important;
+  }
+  .workout-header .ring-caption {
+    font-size: 7px;
+    letter-spacing: 0.65px;
+  }
+  .workout-meta {
+    gap: 8px 12px;
+    margin-top: 13px;
+  }
+  .workout-meta > span {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .workout-meta > span:last-child {
+    flex-basis: auto;
+  }
+  .workout-meta > span:nth-child(2) {
+    display: none;
+  }
+
+  .live-toolbar {
+    padding: 12px 0;
+    gap: 12px;
+    background: var(--bg);
+    z-index: 30;
+  }
+  .live-progress-info > span {
+    display: block;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .live-progress-info > span strong {
+    font-size: 14px;
+  }
+  .live-progress-track {
+    margin-top: 7px;
+    height: 5px;
+  }
+  .live-toolbar-actions {
+    gap: 7px;
+  }
+  .live-toolbar .session-pause-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 10px;
+  }
+  .session-pause-button > span {
+    display: none;
+  }
+  .live-toolbar .live-finish-button {
+    min-height: 44px;
+    padding: 11px 13px;
+    gap: 6px;
+    font-size: 12px;
+    color: #440031;
+  }
+  .page-content:has(.live-exercises) .finish-actions > .btn-primary {
+    color: #440031;
+  }
+
+  .live-exercises {
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .live-exercise {
+    padding: 18px 14px 14px;
+    border-radius: 20px;
+  }
+  .exercise-heading {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .exercise-number {
+    width: 32px;
+    height: 34px;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .exercise-heading .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.35px;
+    line-height: 1.5;
+    margin-bottom: 5px;
+  }
+  .exercise-heading h2 {
+    font-size: 17px;
+    line-height: 1.35;
+    letter-spacing: -0.4px;
+  }
+  .exercise-heading p {
+    font-size: 12px;
+    line-height: 1.65;
+    gap: 3px 10px;
+    margin-top: 7px;
+  }
+  .exercise-heading > .btn {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    margin: -5px -7px 0 0;
+  }
+  .exercise-note,
+  .exercise-alternative,
+  .load-mode-note,
+  .skipped-note {
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .exercise-alternative {
+    margin-top: -7px;
+    margin-bottom: 15px;
+  }
+
+  .live-exercise .set-table-heading,
+  .live-exercise .set-row {
+    grid-template-columns: 28px minmax(48px, 0.85fr) minmax(60px, 1fr) minmax(52px, 0.85fr) 48px;
+    gap: 6px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .live-exercise .set-table-heading {
+    font-size: 10px;
+    line-height: 1.3;
+    letter-spacing: 0.1px;
+    color: #806b76;
+    margin-bottom: 9px;
+  }
+  .live-exercise .set-table-heading > span:last-child {
+    display: none;
+  }
+  .live-exercise .set-row {
+    min-height: 66px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    margin: 4px 0;
+    border-radius: 13px;
+  }
+  .live-exercise .set-row:nth-child(2n) {
+    background: transparent;
+  }
+  .live-exercise .set-label {
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    width: 28px;
+    height: 32px;
+    border-radius: 9px;
+    background: var(--subtle);
+  }
+  .live-exercise .previous-value {
+    font-size: 12px;
+    color: #8d7783;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .live-exercise .set-row input {
+    min-height: 52px;
+    height: 52px;
+    width: 100%;
+    min-width: 0;
+    border-radius: 12px;
+    padding: 10px 3px;
+    font-size: 19px;
+    line-height: 1.3;
+    font-weight: 650;
+    border-color: #ded5d7;
+  }
+  .live-exercise .set-check {
+    min-width: 48px;
+    width: 48px;
+    height: 52px;
+    border-radius: 13px;
+    color: #b84d32;
+    border-color: #edc4b7;
+  }
+  .live-exercise .set-check.checked {
+    color: #fff;
+    border-color: var(--coral);
+  }
+  .live-exercise .set-check svg {
+    width: 23px;
+    height: 23px;
+  }
+  .live-exercise .remove-set {
+    display: none;
+  }
+  .live-exercise[data-editing-sets='true'] .set-table-heading,
+  .live-exercise[data-editing-sets='true'] .set-row {
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 0.85fr) 48px 44px;
+  }
+  .live-exercise[data-editing-sets='true'] .previous-value,
+  .live-exercise[data-editing-sets='true'] .set-table-heading > span:nth-child(2) {
+    display: none;
+  }
+  .live-exercise[data-editing-sets='true'] .remove-set {
+    display: inline-flex;
+  }
+  .live-exercise[data-editing-sets='true'] .set-table-heading > span:last-child {
+    display: block;
+  }
+  .live-exercise .exercise-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 11px;
+    margin-top: 13px;
+    padding-top: 13px;
+  }
+  .live-exercise .add-set-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .live-exercise .add-set-buttons .btn {
+    min-height: 44px;
+    padding: 10px;
+    font-size: 12px;
+    gap: 7px;
+    background: var(--subtle);
+    border: 1px solid var(--line);
+  }
+  .live-exercise .manage-sets-button {
+    display: inline-flex;
+  }
+  .live-exercise .warmup-set-button {
+    display: none;
+  }
+  .live-exercise[data-editing-sets='true'] .warmup-set-button {
+    display: inline-flex;
+  }
+  .live-exercise[data-editing-sets='true'] .manage-sets-button {
+    grid-column: 1/-1;
+    color: var(--coral);
+    background: #f1624409;
+    border-color: #f1624433;
+  }
+  .live-exercise .inline-rest {
+    font-size: 12px;
+    gap: 8px;
+    min-height: 44px;
+  }
+  .live-exercise .inline-rest > svg {
+    width: 16px;
+    height: 16px;
+  }
+  .live-exercise .inline-rest-label {
+    margin-right: auto;
+    font-size: 12px;
+  }
+  .live-exercise .inline-rest input {
+    width: 56px;
+    min-height: 44px;
+    margin: 0;
+    padding: 9px 5px;
+    font-size: 16px;
+  }
+  .live-exercise .inline-rest .icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border: 1px solid var(--line);
+    background: var(--subtle);
+  }
+  .workout-notes .field,
+  .cardio-fields .field {
+    font-size: 12px;
+  }
+  .workout-notes .field textarea {
+    font-size: 16px;
+    font-weight: 400;
+  }
+  .workout-notes .field > small {
+    font-size: 11px;
+  }
+  .finish-actions .btn {
+    min-height: 48px;
+    font-size: 13px;
+  }
+  .workout-guidance {
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  .rest-timer {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    left: 10px;
+    right: 10px;
+    width: auto;
+    padding: 12px;
+    border-radius: 18px;
+  }
+  .rest-timer .timer-compact-row {
+    grid-template-columns: 48px minmax(0, 1fr) 44px 44px;
+    gap: 8px;
+  }
+  .rest-done .timer-compact-row {
+    grid-template-columns: 48px minmax(0, 1fr) 44px;
+  }
+  .rest-timer .progress-ring {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .rest-timer .timer-title {
+    max-width: none !important;
+  }
+  .rest-timer .timer-title strong {
+    font-size: 12px;
+  }
+  .rest-timer .timer-title span {
+    font-size: 11px;
+    max-width: 100%;
+  }
+  .rest-timer .timer-controls .icon-button {
+    font-size: 12px;
+    min-height: 46px;
+  }
+  .rest-timer .timer-controls .icon-button svg {
+    width: 17px;
+    height: 17px;
+  }
+  .timer-duration-field {
+    font-size: 11px;
+  }
+  .timer-duration-field select {
+    font-size: 16px;
+    width: 146px;
+  }
+  .bottom-nav > a {
+    min-height: 48px;
+    min-width: 54px;
+  }
+  .bottom-nav > a > span {
+    font-size: 10px;
+  }
+
+  /* Dialogs become reachable sheets while retaining Radix focus management. */
+  .dialog-content {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: 25px 25px 0 0;
+    padding: 27px 22px calc(22px + env(safe-area-inset-bottom));
+  }
+  .dialog-content:before {
+    content: '';
+    display: block;
+    width: 34px;
+    height: 4px;
+    background: var(--line);
+    border-radius: 99px;
+    margin: -14px auto 20px;
+  }
+  .dialog-heading h2 {
+    font-size: 23px;
+  }
+  .dialog-heading p {
+    font-size: 13px;
+  }
+  .dialog-actions .btn {
+    min-height: 48px;
+    font-size: 13px;
+  }
+  .info-banner,
+  .success-banner {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}
+
+[data-theme='dark'] .live-exercise .set-table-heading {
+  color: #cbb8c3;
+}
+[data-theme='dark'] .live-exercise .previous-value {
+  color: #c4acb9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-progress-track > span,
+  .timer-expand-button svg {
+    transition: none;
+  }
+}
