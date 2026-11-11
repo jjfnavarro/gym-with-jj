@@ -10,6 +10,7 @@ Verified for this release: production build and strict TypeScript; 37 unit/compo
 - Invalid APP_ORIGIN values fail at startup with a clear message. Use an exact public HTTPS origin, without a path or trailing slash.
 - Oversized JSON requests return an actionable 413 response instead of an internal server error.
 - Dismissing or replacing a timer in another tab stops the current tab's repeating alarm.
+- Safari sound recovery resets the media pipeline after a rejected play and keeps the retry control visible until playback is actually accepted. CI uses a pinned Ubuntu 24.04 runner for repeatable browser/media dependencies.
 - GitHub Actions verifies builds, runtime dependency advisories, database migrations, unit/component/API tests, browser flows and the Linux production image. Action versions are pinned to official release commits and workflow permissions are read-only.
 - `scripts/verify-container.mjs` creates an isolated PostgreSQL container, applies all migrations twice, tests the production application and verifies its non-root user and Docker health check. It removes its own temporary containers/network afterward. It never uses the personal preview database.
 

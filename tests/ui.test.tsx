@@ -56,6 +56,7 @@ describe('timer alert playback', () => {
         .mockRejectedValueOnce(new Error('NotAllowedError'))
         .mockResolvedValue(undefined),
       pause: vi.fn(),
+      load: vi.fn(),
       currentTime: 0,
       setAttribute: vi.fn(),
     };
@@ -65,6 +66,7 @@ describe('timer alert playback', () => {
     const sound = new TimerSound();
     await expect(sound.play()).rejects.toThrow('NotAllowedError');
     await expect(sound.play()).resolves.toBeUndefined();
+    expect(media.load).toHaveBeenCalledTimes(1);
   });
   it('does not prime and pause a test sound that is still starting', async () => {
     let started!: () => void;
@@ -86,7 +88,8 @@ describe('timer alert playback', () => {
     const playing = sound.play();
     const unlocking = sound.unlock();
     started();
-    await Promise.all([playing, unlocking]);
+    await expect(unlocking).resolves.toBe(false);
+    await playing;
     expect(media.play).toHaveBeenCalledTimes(1);
     expect(media.pause).toHaveBeenCalledTimes(1);
   });

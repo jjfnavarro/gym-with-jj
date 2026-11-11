@@ -1,5 +1,29 @@
 import { test, expect } from '@playwright/test';
 
+test.afterEach(async ({ page }, info) => {
+  if (info.status === info.expectedStatus || page.isClosed()) return;
+  const diagnostics = await page
+    .evaluate(() => {
+      const state = window as unknown as { alarmStats?: unknown; alarmMedia?: HTMLMediaElement };
+      const audio = state.alarmMedia;
+      return {
+        stats: state.alarmStats,
+        media: audio
+          ? {
+              paused: audio.paused,
+              readyState: audio.readyState,
+              networkState: audio.networkState,
+              currentTime: audio.currentTime,
+              error: audio.error?.message,
+              loop: audio.loop,
+            }
+          : null,
+      };
+    })
+    .catch(() => null);
+  console.info('Timer audio diagnostics:', JSON.stringify(diagnostics));
+});
+
 test('plays timer audio, recovers after reload and reports browser capabilities', async ({
   page,
   browserName,
@@ -20,6 +44,7 @@ test('plays timer audio, recovers after reload and reports browser capabilities'
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
       if (!this.src.endsWith('/rest-alarm-v2.wav')) return play.call(this);
+      Object.assign(window, { alarmMedia: this });
       if (!observed.has(this)) {
         observed.add(this);
         this.addEventListener('pause', () => {

@@ -6,6 +6,7 @@ export class TimerSound {
   private priming: Promise<boolean> | null = null;
   private generation = 0;
   private playbackRequested = false;
+  private needsReload = false;
 
   private element() {
     if (!this.audio) {
@@ -21,7 +22,9 @@ export class TimerSound {
   // The alarm starts with silence; stop as soon as playback starts so enabling
   // alerts doesn't sound an alarm. Don't mute: that wouldn't unlock sound.
   unlock(): Promise<boolean> {
-    if (this.primed || this.playbackRequested) return Promise.resolve(true);
+    if (this.primed) return Promise.resolve(true);
+    // Starting playback isn't evidence that the browser accepted it yet.
+    if (this.playbackRequested) return Promise.resolve(false);
     if (this.priming) return this.priming;
     try {
       const audio = this.element();
@@ -50,6 +53,12 @@ export class TimerSound {
     this.playbackRequested = true;
     const audio = this.element();
     audio.pause();
+    if (this.needsReload) {
+      // Reset a blocked/stalled media pipeline on the next explicit tap while
+      // retaining Safari's permission for this same element.
+      audio.load();
+      this.needsReload = false;
+    }
     audio.loop = repeat;
     audio.volume = 1;
     audio.currentTime = 0;
@@ -61,6 +70,7 @@ export class TimerSound {
       if (generation !== this.generation) return;
       this.primed = false;
       this.playbackRequested = false;
+      this.needsReload = true;
       throw error;
     }
   }
