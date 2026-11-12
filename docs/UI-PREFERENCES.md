@@ -8,6 +8,8 @@ Updated 12 November 2026, Asia/Manila. This pass follows the owner's preference 
 
 The latest Home pass keeps Start new workout and Resume workout, with a shorter active-workout heading, set count and thin progress bar. A seven-day calendar replaces the summary cards; completed days are highlighted and today is outlined. The most recent workout is a single linked row. The split-day grid, personal-record list, duplicate history shortcut and empty-state paragraphs are removed from Home; their full modules remain available through navigation. The calendar uses the saved timezone and a Monday-based week, and its workout counts are available to screen readers.
 
+The large orange dumbbell background now appears throughout the authenticated app and on the login page. A shared decorative component preserves Home's original size, angle and 9% opacity. Its fixed, clipped layer sits behind page content, ignores pointer input and is hidden from screen readers. Login uses the full viewport; authenticated mobile pages keep the background between the header and bottom navigation. Cards, inputs and dialogs retain their existing opaque surfaces for readability.
+
 - The header has icon-only light/dark and refresh controls. Normal synchronization wording, avatar decorations and the sidebar quote are removed. Offline and synchronization errors remain visible when action is needed.
 - Home starts with a plain heading and a large Start new workout button. The motivational hero, green sticker and diagonal-arrow decorations are removed.
 - Module headings use their names alone. Buttons, form fields, navigation labels and workout text are larger. Primary buttons use a solid coral surface and a subtle lower edge.

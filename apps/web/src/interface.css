@@ -273,10 +273,13 @@ textarea {
 .home-overview {
   max-width: 680px;
   margin-inline: auto;
+}
+.main-wrapper,
+.plain-login {
   position: relative;
   isolation: isolate;
 }
-.home-watermark {
+.brand-background {
   position: fixed;
   inset: 90px 0 0;
   z-index: -1;
@@ -287,15 +290,18 @@ textarea {
   pointer-events: none;
   color: var(--coral);
 }
-.home-watermark svg {
+.brand-background svg {
   width: clamp(340px, 90vw, 700px);
   height: auto;
   flex-shrink: 0;
   opacity: 0.09;
   transform: translate(12%, 16%) rotate(-25deg);
 }
+.plain-login .brand-background {
+  inset: 0;
+}
 @media (max-width: 700px) {
-  .home-watermark {
+  .brand-background {
     inset: 72px 0 calc(68px + env(safe-area-inset-bottom));
   }
 }

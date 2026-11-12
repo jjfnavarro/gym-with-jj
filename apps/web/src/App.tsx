@@ -22,6 +22,7 @@ import { createLocal, displayDate, localDay, syncAll } from './lib';
 import { Button } from './components/ui/button';
 import { Dialog } from './components/ui/dialog';
 import { PageHeading, Empty } from './components/common';
+import { BrandBackground } from './components/brand-background';
 
 const Workouts = lazy(() => import('./workouts').then((m) => ({ default: m.Workouts })));
 const SplitEditor = lazy(() => import('./workouts').then((m) => ({ default: m.SplitEditor })));
@@ -91,6 +92,7 @@ export function App() {
         </div>
       </aside>
       <div className="main-wrapper">
+        <BrandBackground />
         <div className="topbar">
           <Link to="/" className="mobile-brand">
             <Dumbbell size={22} />
@@ -366,9 +368,6 @@ function Home({ onStart }: { onStart: () => void }) {
   const weekCount = weekDays.reduce((total, day) => total + day.count, 0);
   return (
     <div className="home-overview">
-      <div className="home-watermark" aria-hidden="true">
-        <Dumbbell strokeWidth={1.15} focusable="false" />
-      </div>
       <PageHeading title="Home" />
       <div className="home-actions">
         <Button className="start-workout-button" onClick={onStart}>

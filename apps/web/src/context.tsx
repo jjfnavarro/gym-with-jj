@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, settingsSchema, sessionSchema, type Bootstrap } from '@gym/shared';
 import { db, authenticate, login, refreshData, syncAll, ApiError, type LocalSession } from './lib';
 import { Button } from './components/ui/button';
+import { BrandBackground } from './components/brand-background';
 import { Dumbbell, WifiOff } from 'lucide-react';
 import type { z } from 'zod';
 import { ZodError } from 'zod';
@@ -190,6 +191,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
   });
   return (
     <main className="login-layout plain-login">
+      <BrandBackground />
       <section className="login-panel">
         <div className="brand">
           <div className="brand-icon">
