@@ -1,11 +1,14 @@
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import request from 'supertest';
 import argon2 from 'argon2';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, createECDH } from 'node:crypto';
+import { generateRequestDetails } from 'web-push';
 import { createDatabase } from '../apps/api/src/db';
 import { createApp } from '../apps/api/src/app';
 import { seedOwner, seedData } from '../apps/api/src/seed';
 import { newSession, type Session, type Split } from '@gym/shared';
+import { createPushService, type PushSender } from '../apps/api/src/push';
+import { logger } from '../apps/api/src/app';
 const url = process.env.TEST_DATABASE_URL;
 if (!url || !new URL(url).pathname.endsWith('_test'))
   throw new Error(
@@ -48,6 +51,187 @@ beforeAll(async () => {
     },
   });
   await db.$transaction((tx) => seedOwner(tx, owner.id), { timeout: 30000 });
+});
+
+describe('durable background rest alerts', () => {
+  const delivered: Array<{
+    payload: {
+      notification: { title: string; body: string; silent: boolean; navigate: string };
+      web_push: number;
+    };
+    options: unknown;
+  }> = [];
+  const sender: PushSender = async (subscription, payload, options) => {
+    const request = generateRequestDetails(subscription, payload, options);
+    expect(request.headers?.Authorization).toBeTruthy();
+    expect(request.body).toBeInstanceOf(Buffer);
+    delivered.push({ payload: JSON.parse(String(payload)), options });
+    return { statusCode: 201, body: '', headers: {} };
+  };
+  let subscriptionId: string;
+  beforeAll(async () => {
+    csrf = (await post('/auth/login', { email: 'integration@example.test', password })).body
+      .csrfToken;
+  });
+  const subscribe = async () => {
+    const receiver = createECDH('prime256v1');
+    receiver.generateKeys();
+    const result = await post('/push/subscriptions', {
+      endpoint: `https://web.push.apple.com/${randomUUID()}`,
+      keys: {
+        p256dh: receiver.getPublicKey().toString('base64url'),
+        auth: randomBytes(16).toString('base64url'),
+      },
+    });
+    expect(result.status).toBe(200);
+    subscriptionId = result.body.id;
+    delivered.length = 0;
+  };
+  const schedule = (revision: number, delayMs: number | null = 60000, extra = {}) =>
+    put(`/push/subscriptions/${subscriptionId}/timer`, {
+      revision,
+      delayMs,
+      exerciseName: 'Chest press',
+      ...extra,
+    });
+  const makeDue = () =>
+    db.restPushJob.update({
+      where: { subscriptionId },
+      data: { dueAt: new Date(Date.now() - 100), nextAttemptAt: new Date(Date.now() - 100) },
+    });
+  it('keeps private signing keys server-side and stable across service restarts', async () => {
+    expect((await request(app).get('/api/push/config')).status).toBe(401);
+    const first = await agent.get('/api/push/config');
+    expect(first.status).toBe(200);
+    expect(Object.keys(first.body)).toEqual(['publicKey']);
+    const restarted = createPushService(db, 'https://gym.example', logger, sender);
+    expect((await restarted.config()).publicKey).toBe(first.body.publicKey);
+    expect(
+      (
+        await post('/push/subscriptions', {
+          endpoint: 'https://127.0.0.1/private',
+          keys: { p256dh: '', auth: '' },
+        })
+      ).status,
+    ).toBe(400);
+  });
+  it('delivers a persisted due timer once, without an open browser page', async () => {
+    await subscribe();
+    expect((await schedule(1)).body.scheduled).toBe(true);
+    await makeDue();
+    const restarted = createPushService(db, 'https://gym.example', logger, sender);
+    await Promise.all([
+      restarted.tick(),
+      createPushService(db, 'https://gym.example', logger, sender).tick(),
+    ]);
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]!.payload).toMatchObject({
+      web_push: 8030,
+      notification: {
+        title: 'Rest complete',
+        body: 'Next set: Chest press',
+        silent: false,
+        navigate: 'https://gym.example/',
+      },
+    });
+    expect(delivered[0]!.options).toMatchObject({
+      urgency: 'high',
+      topic: 'jj-rest-complete',
+      timeout: 5000,
+    });
+    await restarted.tick();
+    expect(delivered).toHaveLength(1);
+  });
+  it('cancels paused/skipped rest and rejects older requests arriving after cancellation', async () => {
+    await subscribe();
+    await schedule(1);
+    expect((await schedule(3, null)).body.scheduled).toBe(false);
+    expect((await schedule(2)).body.superseded).toBe(true);
+    await createPushService(db, 'https://gym.example', logger, sender).tick();
+    expect(delivered).toHaveLength(0);
+    expect(
+      (await db.restPushJob.findUniqueOrThrow({ where: { subscriptionId } })).dueAt,
+    ).toBeNull();
+  });
+  it('replaces rest, supports exercise breaks, and honors the sound setting', async () => {
+    await subscribe();
+    await schedule(1);
+    await schedule(2, 90000, { exerciseName: 'Next movement', kind: 'exercise', sound: false });
+    await makeDue();
+    await createPushService(db, 'https://gym.example', logger, sender).tick();
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]!.payload.notification).toMatchObject({
+      body: 'Next exercise: Next movement',
+      silent: true,
+    });
+  });
+  it('expires stale jobs and retries temporary failures without retrying invalid subscriptions', async () => {
+    await subscribe();
+    await schedule(1);
+    await db.restPushJob.update({
+      where: { subscriptionId },
+      data: { dueAt: new Date(Date.now() - 61000), nextAttemptAt: new Date(Date.now() - 61000) },
+    });
+    await createPushService(db, 'https://gym.example', logger, sender).tick();
+    expect(delivered).toHaveLength(0);
+    await schedule(2);
+    await makeDue();
+    const temporary: PushSender = async () => {
+      throw { statusCode: 503 };
+    };
+    await createPushService(db, 'https://gym.example', logger, temporary).tick();
+    expect((await db.restPushJob.findUniqueOrThrow({ where: { subscriptionId } })).attempts).toBe(
+      1,
+    );
+    await db.restPushJob.update({
+      where: { subscriptionId },
+      data: { nextAttemptAt: new Date(Date.now() - 100) },
+    });
+    await createPushService(db, 'https://gym.example', logger, sender).tick();
+    expect(delivered).toHaveLength(1);
+    await schedule(3);
+    await makeDue();
+    const gone: PushSender = async () => {
+      throw { statusCode: 410 };
+    };
+    await createPushService(db, 'https://gym.example', logger, gone).tick();
+    expect(
+      (await db.pushSubscription.findUniqueOrThrow({ where: { id: subscriptionId } })).enabled,
+    ).toBe(false);
+    expect((await schedule(4)).status).toBe(404);
+  });
+  it('requires owner authentication/CSRF and removes scheduled alerts when disabled', async () => {
+    await subscribe();
+    expect(
+      (
+        await request(app)
+          .put(`/api/push/subscriptions/${subscriptionId}/timer`)
+          .set('Origin', 'http://localhost:5173')
+          .send({ revision: 1, delayMs: 10000 })
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await agent
+          .put(`/api/push/subscriptions/${subscriptionId}/timer`)
+          .set('Origin', 'http://localhost:5173')
+          .send({ revision: 1, delayMs: 10000 })
+      ).status,
+    ).toBe(403);
+    expect((await schedule(1, 20000000)).status).toBe(400);
+    expect((await schedule(1, 10000, { path: '//evil.example' })).status).toBe(400);
+    expect(
+      (await put(`/push/subscriptions/${randomUUID()}/timer`, { revision: 1, delayMs: 10000 }))
+        .status,
+    ).toBe(404);
+    await schedule(1);
+    expect((await remove(`/push/subscriptions/${subscriptionId}`)).status).toBe(204);
+    await createPushService(db, 'https://gym.example', logger, sender).tick();
+    expect(delivered).toHaveLength(0);
+    expect(
+      (await db.restPushJob.findUniqueOrThrow({ where: { subscriptionId } })).dueAt,
+    ).toBeNull();
+  });
 });
 afterAll(async () => {
   await db.workoutSplit.deleteMany();

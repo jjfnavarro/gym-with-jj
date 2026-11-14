@@ -1,5 +1,7 @@
 # GYM WITH JJ
 
+For installed iPhone Lock Screen rest alerts, see [background alert setup](docs/BACKGROUND-ALERTS.md). Enable alerts in Settings and run the ten-second locked-phone test before relying on them at the gym.
+
 A mobile-first, owner-only workout journal with a real Express/PostgreSQL backend, offline workout logging, a persistent rest timer, and a warm coral/plum visual system. Built for a personal Railway deployment, with a single application container and a separate persistent PostgreSQL service.
 
 The latest [mobile workout UI pass](docs/MOBILE-UI.md) adds larger set inputs, a sticky Finish action, expandable compact timer controls and phone bottom sheets.

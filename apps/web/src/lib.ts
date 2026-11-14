@@ -35,6 +35,14 @@ export class ApiError extends Error {
   }
 }
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  // Cached screens mount before the authentication query completes on reload.
+  // Obtain CSRF first for automatic timer writes as well as user actions.
+  if (
+    !['GET', 'HEAD', 'OPTIONS'].includes(options.method ?? 'GET') &&
+    path !== '/auth/login' &&
+    !csrf
+  )
+    await authenticate();
   const res = await fetch(`/api${path}`, {
     ...options,
     credentials: 'same-origin',
@@ -193,13 +201,19 @@ export function syncAll(): Promise<void> {
   return task;
 }
 export async function logout() {
-  await api('/auth/logout', { method: 'POST' });
+  await api('/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({
+      pushSubscriptionId: localStorage.getItem('jj-push-subscription') ?? undefined,
+    }),
+  });
   csrf = '';
   await db.transaction('rw', db.meta, db.sessions, async () => {
     await db.meta.clear();
     await db.sessions.clear();
   });
   localStorage.removeItem('jj-timer');
+  localStorage.removeItem('jj-push-subscription');
 }
 export function download(name: string, data: string, type = 'application/json') {
   const url = URL.createObjectURL(new Blob([data], { type }));

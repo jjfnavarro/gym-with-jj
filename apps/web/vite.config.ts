@@ -24,6 +24,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['/push-events.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api(?:\/|$)/],
         globPatterns: ['**/*.{js,css,html,png,svg,woff2,wav}'],

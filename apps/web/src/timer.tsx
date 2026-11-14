@@ -22,6 +22,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { restMinutes } from './rest';
 import { TimerSound, vibrateAlert } from './timer-alerts';
 import { Dialog } from './components/ui/dialog';
+import { pushChangeEvent, pushSubscriptionId, syncRestPush } from './push';
 import { Button } from './components/ui/button';
 type TimerContext = {
   start: (
@@ -66,7 +67,7 @@ export function Ring({
   );
 }
 export function TimerProvider({ children }: { children: ReactNode }) {
-  const { data, rows, notice } = useApp();
+  const { data, rows, online, notice } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const continueExercise = () => {
@@ -86,6 +87,74 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   });
   const [now, setNow] = useState(Date.now());
   const [expanded, setExpanded] = useState(false);
+  const [pushVersion, setPushVersion] = useState(0);
+  const [pushState, setPushState] = useState<'off' | 'saving' | 'ready' | 'error'>('off');
+  const activeSessionId = rows.find((row) => ['active', 'paused'].includes(row.data.status))?.id;
+  useEffect(() => {
+    const update = () => setPushVersion((value) => value + 1);
+    window.addEventListener(pushChangeEvent, update);
+    window.addEventListener('online', update);
+    const visible = () => {
+      if (document.visibilityState === 'visible') update();
+    };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      window.removeEventListener(pushChangeEvent, update);
+      window.removeEventListener('online', update);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, []);
+  useEffect(() => {
+    // Resuming a suspended page must neither cancel a due alert nor schedule a
+    // second one for a rest that has already ended.
+    if (timer?.done || (timer?.endAt != null && timer.endAt <= Date.now())) return;
+    if (!pushSubscriptionId()) {
+      setPushState('off');
+      return;
+    }
+    let disposed = false;
+    const running = data.settings.notifications && timer?.endAt != null;
+    if (running && (!('Notification' in window) || Notification.permission !== 'granted')) {
+      setPushState('error');
+      void syncRestPush(null, data.settings.sound, '/').catch(() => {});
+      notice(
+        'Allow notifications for GYM WITH JJ in your phone Settings to receive Lock Screen alerts.',
+      );
+      return;
+    }
+    setPushState('saving');
+    void syncRestPush(
+      running ? timer : null,
+      data.settings.sound,
+      activeSessionId ? `/session/${activeSessionId}` : '/',
+    )
+      .then((scheduled) => {
+        if (!disposed) setPushState(scheduled ? 'ready' : 'off');
+      })
+      .catch(() => {
+        if (disposed) return;
+        setPushState('error');
+        notice(
+          running
+            ? 'Lock Screen alert could not be scheduled. Keep the app open and check your connection.'
+            : 'Could not cancel the Lock Screen alert. It may still arrive; reconnect to clear it.',
+        );
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [
+    timer?.endAt,
+    timer?.done,
+    timer?.exerciseName,
+    timer?.kind,
+    data.settings.notifications,
+    data.settings.sound,
+    activeSessionId,
+    online,
+    pushVersion,
+    notice,
+  ]);
   const dismissAlarm = () => {
     alertSound.stop();
     setTimer(null);
@@ -181,25 +250,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     // One unsupported channel must never prevent the other alert from firing.
     if (data.settings.vibration) vibrateAlert();
     if (data.settings.sound) void playSound(true);
-    if (
-      data.settings.notifications &&
-      'Notification' in window &&
-      Notification.permission === 'granted' &&
-      'serviceWorker' in navigator
-    )
-      void navigator.serviceWorker
-        .getRegistration()
-        .then((reg) =>
-          reg?.showNotification('Rest complete', {
-            body:
-              timer.kind === 'exercise'
-                ? `Next exercise: ${timer.exerciseName}`
-                : `Next set: ${timer.exerciseName}`,
-            icon: '/icon-192.png',
-            tag: 'jj-rest-complete',
-          }),
-        )
-        .catch(() => notice('The browser could not show the timer notification.'));
   }, [remaining, timer, data.settings, playSound, notice]);
   const adjust = (delta: number) =>
     setTimer((t) => {
@@ -339,6 +389,19 @@ export function TimerProvider({ children }: { children: ReactNode }) {
               </>
             )}
           </div>
+          {data.settings.notifications && !timer.done && (
+            <p className="timer-push-status" role="status">
+              {pushState === 'error'
+                ? 'Lock Screen alert unavailable · check connection'
+                : pushState === 'saving'
+                  ? 'Updating Lock Screen alert…'
+                  : timer.endAt === null
+                    ? 'Lock Screen alert paused'
+                    : pushState === 'ready'
+                      ? 'Lock Screen alert ready'
+                      : 'Enable Lock Screen alerts in Settings'}
+            </p>
+          )}
           {data.settings.sound && !soundReady && (
             <button className="timer-audio-recovery" onClick={() => void playSound()}>
               {timer.done ? 'Play sound' : 'Enable timer sound'}

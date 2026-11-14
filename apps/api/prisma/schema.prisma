@@ -17,6 +17,39 @@ model User {
   splits WorkoutSplit[]
   exercises Exercise[]
   workouts WorkoutSession[]
+  pushSubscriptions PushSubscription[]
+}
+model PushCredentials {
+  id String @id
+  publicKey String
+  privateKey String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+model PushSubscription {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  endpoint String @unique
+  p256dh String
+  auth String
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  job RestPushJob?
+  @@index([userId])
+}
+model RestPushJob {
+  subscriptionId String @id @db.Uuid
+  subscription PushSubscription @relation(fields:[subscriptionId],references:[id],onDelete:Cascade)
+  revision Float
+  dueAt DateTime? @db.Timestamptz(3)
+  nextAttemptAt DateTime? @db.Timestamptz(3)
+  exerciseName String
+  kind String
+  path String
+  sound Boolean @default(true)
+  test Boolean @default(false)
+  attempts Int @default(0)
+  @@index([nextAttemptAt])
 }
 model UserSettings {
   userId String @id @db.Uuid

@@ -1,5 +1,7 @@
 # Timer sound and vibration
 
+Background push was added on 14 November 2026. Installed iPhone users can now opt into server-scheduled Lock Screen notifications. See [BACKGROUND-ALERTS.md](BACKGROUND-ALERTS.md) for setup, sound limitations and the physical-phone test. The browser audio and visual-alarm behavior described below still applies inside the app.
+
 Updated 12 November 2026 after an iPhone Safari report of silent timer expiry.
 
 The previous timer only emitted oscillator tones if its AudioContext already existed and was running. It silently skipped sound when the context was missing after reload or suspended by the browser. Web Audio can also follow different iPhone mute-switch behavior from media-element playback. Settings displayed vibration as enabled even when the browser exposed no vibration API.

@@ -1,4 +1,10 @@
 /* Functional, mobile-first interface: clear labels and controls, without decorative copy. */
+.timer-push-status {
+  padding: 0 12px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
 .cardio-card .finisher-complete {
   width: 100%;
   min-height: 52px;

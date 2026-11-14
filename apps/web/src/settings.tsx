@@ -5,7 +5,6 @@ import {
   LogOut,
   Volume2,
   Vibrate,
-  Bell,
   ShieldCheck,
   AlertTriangle,
   RefreshCw,
@@ -21,6 +20,7 @@ import { RestMinutesInput } from './components/autosave-input';
 import { restMinutes } from './rest';
 import { useTimer } from './timer';
 import { vibrationAvailable, vibrateAlert } from './timer-alerts';
+import { LockScreenAlerts } from './components/lock-screen-alerts';
 interface InstallEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
@@ -375,54 +375,7 @@ export function SettingsPage() {
             Cardio is logged separately and doesn’t affect strength-set progress.
           </div>
         </section>
-        <section className="card settings-card">
-          <div className="section-title">
-            <div>
-              <h2>Timer & notifications</h2>
-            </div>
-          </div>
-          <p>
-            Keep the app in the foreground for reliable timer sounds. Locked phones and suspended
-            browsers may delay alerts.
-          </p>
-          <div className="row-actions">
-            <Button
-              variant="secondary"
-              disabled={!online}
-              onClick={() =>
-                void run(async () => {
-                  if (!('Notification' in window))
-                    throw new Error('Notifications are not supported in this browser.');
-                  const permission = await Notification.requestPermission();
-                  if (permission !== 'granted')
-                    throw new Error(
-                      'Notifications were not enabled. You can change permission in your browser settings.',
-                    );
-                  const next = { ...settings, notifications: true };
-                  await api('/settings', {
-                    method: 'PUT',
-                    body: JSON.stringify(settingsSchema.parse(next)),
-                  });
-                  setSettings(next);
-                  await refresh();
-                  notice('Rest notifications enabled');
-                })
-              }
-            >
-              <Bell size={17} />
-              {settings.notifications ? 'Notifications enabled' : 'Enable notifications'}
-            </Button>
-            {settings.notifications && (
-              <Button variant="ghost" onClick={() => change('notifications', false)}>
-                Disable
-              </Button>
-            )}
-          </div>
-          <p className="small muted">
-            Notification permission is requested only when you press the button. Alerts are best
-            effort; this app cannot guarantee a background alarm.
-          </p>
-        </section>
+        <LockScreenAlerts onEnabledChange={(enabled) => change('notifications', enabled)} />
         <section className="card settings-card">
           <div className="section-title">
             <div>

@@ -21,6 +21,13 @@ import {
   type Settings,
 } from '@gym/shared';
 import { bootstrap, saveSplit, sessionData, sessionInclude, serializeSession } from './data.js';
+import {
+  createPushService,
+  pushSubscriptionSchema,
+  pushScheduleSchema,
+  PushError,
+  type PushService,
+} from './push.js';
 const hash = (s: string) => createHash('sha256').update(s).digest('hex');
 class HttpError extends Error {
   constructor(
@@ -38,7 +45,7 @@ export const logger = pino({
 });
 export function createApp(
   db: PrismaClient,
-  options: { origin?: string; production?: boolean; staticDir?: string } = {},
+  options: { origin?: string; production?: boolean; staticDir?: string; push?: PushService } = {},
 ) {
   const app = express();
   const production = options.production ?? process.env.NODE_ENV === 'production';
@@ -146,8 +153,32 @@ export function createApp(
     next();
   });
   const auth = (req: Request) => req as AuthRequest;
+  const push = options.push ?? createPushService(db, origin, logger);
+  app.use(
+    '/api/push',
+    rateLimit({ windowMs: 60000, limit: 240, standardHeaders: 'draft-8', legacyHeaders: false }),
+  );
+  app.get('/api/push/config', async (_req, res) => res.json(await push.config()));
+  app.post('/api/push/subscriptions', async (req, res) =>
+    res.json(await push.subscribe(auth(req).ownerId, pushSubscriptionSchema.parse(req.body))),
+  );
+  app.put('/api/push/subscriptions/:id/timer', async (req, res) =>
+    res.json(
+      await push.schedule(
+        auth(req).ownerId,
+        id.parse(req.params.id),
+        pushScheduleSchema.parse(req.body),
+      ),
+    ),
+  );
+  app.delete('/api/push/subscriptions/:id', async (req, res) => {
+    await push.disable(auth(req).ownerId, id.parse(req.params.id));
+    res.status(204).end();
+  });
   app.get('/api/auth/me', (req, res) => res.json({ csrfToken: auth(req).csrfToken }));
   app.post('/api/auth/logout', async (req, res) => {
+    const input = z.object({ pushSubscriptionId: id.optional() }).parse(req.body ?? {});
+    if (input.pushSubscriptionId) await push.disable(auth(req).ownerId, input.pushSubscriptionId);
     await db.authSession.deleteMany({ where: { tokenHash: auth(req).authHash } });
     res.clearCookie(cookieName, cookieOptions).status(204).end();
   });
@@ -165,6 +196,11 @@ export function createApp(
       where: { userId: auth(req).ownerId },
       data: { preferences: settings },
     });
+    if (!settings.notifications)
+      await db.restPushJob.updateMany({
+        where: { subscription: { userId: auth(req).ownerId } },
+        data: { dueAt: null, nextAttemptAt: null },
+      });
     res.json(settings);
   });
   app.put('/api/exercises/:id', async (req, res) => {
@@ -370,8 +406,11 @@ export function createApp(
       return res
         .status(400)
         .json({ error: 'Please check the entered values', issues: error.issues });
-    if (error instanceof HttpError)
-      return res.status(error.status).json({ error: error.message, detail: error.detail });
+    if (error instanceof HttpError || error instanceof PushError)
+      return res.status(error.status).json({
+        error: error.message,
+        detail: error instanceof HttpError ? error.detail : undefined,
+      });
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
       return res
         .status(409)

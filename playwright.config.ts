@@ -27,7 +27,7 @@ export default defineConfig({
     },
     {
       name: 'mobile-webkit',
-      testMatch: /(?:timer-alerts|cardio)\.spec\.ts/,
+      testMatch: /(?:timer-alerts|cardio|push)\.spec\.ts/,
       use: { ...devices['iPhone 13'], viewport: { width: 390, height: 844 } },
     },
   ],
