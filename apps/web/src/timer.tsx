@@ -89,6 +89,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const [expanded, setExpanded] = useState(false);
   const [pushVersion, setPushVersion] = useState(0);
   const [pushState, setPushState] = useState<'off' | 'saving' | 'ready' | 'error'>('off');
+  const previousPushDeadline = useRef(timer?.endAt);
   const activeSessionId = rows.find((row) => ['active', 'paused'].includes(row.data.status))?.id;
   useEffect(() => {
     const update = () => setPushVersion((value) => value + 1);
@@ -107,7 +108,13 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Resuming a suspended page must neither cancel a due alert nor schedule a
     // second one for a rest that has already ended.
-    if (timer?.done || (timer?.endAt != null && timer.endAt <= Date.now())) return;
+    const previousDeadline = previousPushDeadline.current;
+    previousPushDeadline.current = timer?.endAt;
+    if (
+      timer?.done ||
+      (timer?.endAt != null && timer.endAt <= Date.now() && timer.endAt === previousDeadline)
+    )
+      return;
     if (!pushSubscriptionId()) {
       setPushState('off');
       return;

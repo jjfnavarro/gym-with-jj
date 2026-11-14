@@ -1,17 +1,15 @@
 import { test, expect, type Page } from '@playwright/test';
 
 async function signIn(page: Page) {
-  await page
-    .context()
-    .addCookies([
-      {
-        name: 'gym_session',
-        value: process.env.E2E_SESSION_TOKEN!,
-        url: process.env.E2E_BASE_URL ?? 'http://localhost:4173',
-        httpOnly: true,
-        sameSite: 'Strict',
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      name: 'gym_session',
+      value: process.env.E2E_SESSION_TOKEN!,
+      url: process.env.E2E_BASE_URL ?? 'http://localhost:4173',
+      httpOnly: true,
+      sameSite: 'Strict',
+    },
+  ]);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
 }
@@ -134,6 +132,31 @@ test('synchronizes enabled rest alerts across start, pause, resume, skip and rel
     await page.getByRole('button', { name: 'Add 0.25 minutes', exact: true }).click();
     await expect.poll(() => requests.at(-1)?.delayMs ?? 0).toBeGreaterThan(95000);
     await page.getByRole('button', { name: 'Skip rest', exact: true }).click();
+    await expect.poll(() => requests.at(-1)?.delayMs).toBeNull();
+    // Reducing a running rest to zero replaces the old deadline immediately.
+    await page.evaluate(() =>
+      localStorage.setItem(
+        'jj-timer',
+        JSON.stringify({
+          endAt: Date.now() + 10000,
+          durationMs: 10000,
+          remainingMs: 10000,
+          exerciseName: 'Chest press',
+          done: false,
+          kind: 'set',
+          nextExerciseId: null,
+        }),
+      ),
+    );
+    await page.reload();
+    await expect(page.getByText('Lock Screen alert ready', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'More timer controls', exact: true }).click();
+    await page.getByRole('button', { name: 'Subtract 0.25 minutes', exact: true }).click();
+    await expect(
+      page.getByRole('alertdialog', { name: 'Rest complete', exact: true }),
+    ).toBeVisible();
+    await expect.poll(() => requests.at(-1)?.delayMs).toBe(0);
+    await page.getByRole('button', { name: 'Dismiss alarm', exact: true }).click();
     await expect.poll(() => requests.at(-1)?.delayMs).toBeNull();
     // Expiry on reopening must not schedule a duplicate background alert.
     const count = requests.length;
